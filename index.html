@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#5b8def" />
-  <meta name="description" content="2026 초등 교감 자격연수 종합안내" />
+  <meta name="description" content="2026 초등 교감 자격연수 일정·장소·평가·식단 종합안내" />
   <title>2026 초등 교감 자격연수 종합안내</title>
   <style>
     :root{
@@ -51,11 +51,14 @@
     .day-summary b{color:var(--blue-dark)}
     .mode-badge{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:#eaf2ff;color:var(--blue);font-size:11px;font-weight:900}
     .schedule-list{display:grid;gap:10px}
-    .lesson{width:100%;min-height:72px;display:grid;grid-template-columns:74px minmax(0,1fr);overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 6px 14px rgba(75,107,153,.08);padding:0;text-align:left}
+    .lesson{width:100%;min-height:50px;display:grid;grid-template-columns:74px minmax(0,1fr);overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 6px 14px rgba(75,107,153,.08);padding:0;text-align:left}
     .lesson:active{transform:scale(.99)}
     .lesson .time{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:#f1f6fc;color:#637187;font-size:12px;font-weight:850;line-height:1.3}
     .lesson .time i{font-style:normal;color:#9ba8b9;font-size:9px}
-    .lesson-main{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;border-left:1px solid var(--line);padding:12px 11px}
+    .lesson-main{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;border-left:1px solid var(--line);padding:10px 11px}
+    .lesson.duration-1 .lesson-main{padding:5px 10px}
+    .lesson.duration-1 .lesson-title{font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .lesson.duration-1 .lesson-place{line-height:1.15}
     .lesson-title{min-width:0;color:#26354b;font-size:15px;font-weight:850;line-height:1.36;letter-spacing:-.04em;overflow-wrap:anywhere}
     .lesson-place{flex:0 0 auto;max-width:76px;text-align:right;color:#6d7a8e;font-size:10px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
     .lesson-place:before{content:'⌖ ';color:var(--blue)}
@@ -150,7 +153,7 @@
       <div class="guide-grid" id="guideList"></div>
     </section>
 
-    <p class="source-note">※ 「2026 초등 교감 자격연수 운영 계획」을 바탕으로 제작되었으며, 운영 상황에 따라 일정·강의실·강사 등이 변경될 수 있습니다. -B-</p>
+    <p class="source-note">※ 「2026 초등 교감 자격연수 운영 계획」을 바탕으로 제작되었으며, 운영 상황에 따라 일정·강의실·강사 등이 변경될 수 있습니다.</p>
   </main>
 
   <nav class="bottom" aria-label="하단 메뉴">
@@ -316,10 +319,16 @@
       return String(place).replace('충남교육청교육연수원','연수원').replace('충청남도교육청교육연수원','연수원').replace('실시간 비대면','비대면').replace('스플라스 리솜 스페이스 A','리솜 A');
     }
     function openModal(title,html){document.querySelector('#modalTitle').textContent=title;document.querySelector('#modalBody').innerHTML=html;modal.showModal()}
+    function lessonPeriods(item){
+      const start=timeToNum(item.start), end=timeToNum(item.end);
+      // 50분 수업 + 차시 사이 10분을 기준으로 1·2·3차시를 계산
+      return Math.max(1,Math.round((end-start+10)/60));
+    }
     function rowHtml(day,item,index){
       const st=statusOf(day,item), special=typeClass(item), tone=special?'':`tone${index%5}`, now=st==='now'&&item.type!=='식사';
+      const periods=lessonPeriods(item), cardHeight=periods*50;
       const tag=item.type&&item.type!=='강의'?`<span class="tag">${esc(item.type)}</span>`:'';
-      return `<button class="lesson ${tone} ${special} ${now?'now':''} ${st==='past'?'past':''}" data-id="${item.id}"><span class="time"><b>${esc(item.start)}</b><i>~</i><b>${esc(item.end)}</b></span><span class="lesson-main"><span class="lesson-title">${now?'<span class="now-badge">진행 중</span>':''}${tag}${esc(item.title)}</span><span class="lesson-place">${esc(shortPlace(item.location))}</span></span></button>`;
+      return `<button class="lesson duration-${periods} ${tone} ${special} ${now?'now':''} ${st==='past'?'past':''}" style="height:${cardHeight}px" data-id="${item.id}"><span class="time"><b>${esc(item.start)}</b><i>~</i><b>${esc(item.end)}</b></span><span class="lesson-main"><span class="lesson-title">${now?'<span class="now-badge">진행 중</span>':''}${tag}${esc(item.title)}</span><span class="lesson-place">${esc(shortPlace(item.location))}</span></span></button>`;
     }
     function renderDateChips(){
       const el=document.querySelector('#dateChips'); el.innerHTML=DAYS.map(d=>`<button class="chip ${state.selectedDate===d.date?'active':''}" data-date="${d.date}">${d.label}</button>`).join('');
@@ -363,6 +372,15 @@
       return String(value).split(/\n|\r|,\s*/).map(x=>x.trim()).filter(Boolean);
     }
     function mealForDate(date){
+      // 특정 연수일은 시트 식단보다 지정 안내를 우선 표시
+      const fixedMeals={
+        '2026-07-22':{lunch:['지정 식당']},
+        '2026-07-23':{lunch:['지정 식당']},
+        '2026-07-24':{lunch:['개별식사']},
+        '2026-07-27':{lunch:['개별식사']}
+      };
+      if(fixedMeals[date])return fixedMeals[date];
+
       const direct=state.meals?.[date];
       if(direct)return direct;
       const compact=String(date||'').replace(/\D/g,'');
@@ -399,6 +417,7 @@
       if(key==='overview')return openModal('연수 개요',`<span class="modal-label">2026 초등 교감 자격연수</span><h3>연수 개요</h3><section class="info-card"><p><b>기간</b> · 2026. 7. 16.(목)~8. 7.(금), 16일</p><p><b>대상</b> · 2026 초등 교감 자격연수 대상자 76명</p><p><b>총시수</b> · 100시간</p><p><b>형태</b> · 혼합연수</p></section><p>성찰, 리더십, 교무 운영, 교육 지원, 업무조정 및 갈등관리 역량 함양을 목표로 합니다.</p>`);
       if(key==='method')return openModal('연수 형태',`<h3>총 100시간</h3><table class="table"><thead><tr><th>형태</th><th>시간</th></tr></thead><tbody><tr><td>원격 콘텐츠</td><td>6시간</td></tr><tr><td>집합연수</td><td>91시간</td></tr><tr><td>└ 실시간 비대면</td><td>11시간</td></tr><tr><td>└ 대면</td><td>80시간</td></tr><tr><td>과제수행</td><td>3시간</td></tr><tr><td><b>합계</b></td><td><b>100시간</b></td></tr></tbody></table><p class="empty">일자별 시간표 94시간과 원격 콘텐츠 6시간을 합해 총 100시간입니다.</p>`);
       if(key==='place')return openModal('연수 장소',`<h3>주요 장소</h3><section class="info-card"><h4>집합연수</h4><p>충남교육청교육연수원 대강당, 승지관 201·301호, 지능정보연수실, 분임토의실 등</p></section><section class="info-card"><h4>현장체험연수</h4><p>홍성 일원: 홍동초, 햇살배움터, 진로융합교육원, 스플라스 리솜 등</p></section><section class="info-card"><h4>원격연수</h4><p>소속교(기관) 또는 자택</p></section>`);
+      if(key==='live')return openModal('실시간 화상 연수',`<span class="modal-label">소속교(기관) 또는 자택</span><h3>실시간 비대면 연수</h3><section class="info-card"><h4>7. 24.(금)</h4><p>안전한 학교 만들기 · 명화 속 숨은 이야기를 통한 다각적 시선과 소통</p></section><section class="info-card"><h4>7. 27.(월)</h4><p>사례 중심 민원 예방과 대응 · 위기학생의 이해와 지원 · 교육공무직원 인사 및 복무관리</p></section><p>화상 연수 접속 정보와 세부 안내는 별도 공지를 확인하세요.</p>`);
       if(key==='remote')return openModal('원격 콘텐츠',`<span class="modal-label">연수 기간 중 · 총 6시간</span><h3>원격연수 콘텐츠</h3><table class="table"><thead><tr><th>과목</th><th>차시</th></tr></thead><tbody>${REMOTE_CONTENTS.map(([t,c,code])=>`<tr><td><b>${esc(t)}</b><br><span style="color:#778399;font-size:11px">${esc(c)} · ${esc(code)}</span></td><td>1</td></tr>`).join('')}</tbody></table>`);
       if(key==='evaluation')return openModal('평가 안내',`<h3>평가계획</h3><table class="table"><thead><tr><th>평가</th><th>배점</th></tr></thead><tbody><tr><td>서술형 평가</td><td>50점</td></tr><tr><td>논술평가</td><td>20점</td></tr><tr><td>개별 과제물</td><td>10점</td></tr><tr><td>개별 보고서</td><td>10점</td></tr><tr><td>근태평가</td><td>10점</td></tr><tr><td><b>합계</b></td><td><b>100점</b></td></tr></tbody></table><p>가산점은 평가관리 규정에 따라 0.5~1.0점이 적용될 수 있습니다.</p>`);
     }
